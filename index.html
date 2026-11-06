@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>你的精神故乡，在世界哪个角落</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --ink:#3b332a;
+    --dim:#7d7365;
+    --dim2:#a4988a;
+    --accent:#c65f1f;
+    --line:rgba(84,66,48,.16);
+    --glass:rgba(255,255,255,.55);
+  }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    background:#ece8de;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ---------- 背景：浅灰奶油噪点光斑 ---------- */
+  .bg{position:fixed; inset:0; z-index:0; overflow:hidden;
+    background:#ece8de url("bg.jpg") center/cover no-repeat;
+  }
+  .bg::after{content:""; position:absolute; inset:0; background:rgba(250,247,240,.42);}
+  .grain{
+    position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.05;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.6'/></svg>");
+  }
+  /* ---------- 布局 ---------- */
+  .app{position:relative; z-index:2; width:100%; max-width:480px; margin:0 auto; min-height:100vh; }
+  .screen{display:none; min-height:100vh; padding:0 26px calc(34px + env(safe-area-inset-bottom));}
+  .screen.active{display:flex; flex-direction:column; animation:fadeUp .55s cubic-bezier(.22,.9,.24,1) both;}
+  @keyframes fadeUp{from{opacity:0; transform:translateY(16px)} to{opacity:1; transform:none}}
+
+  /* ---------- 封面 ---------- */
+  #cover{justify-content:center; align-items:center; text-align:center; padding-bottom:64px;}
+  .kicker{font-size:11px; letter-spacing:.42em; color:var(--dim2); text-transform:uppercase; margin-bottom:26px;}
+  .cover-title{
+    font-family:"Songti SC","Noto Serif SC",Georgia,serif;
+    font-size:38px; line-height:1.24; letter-spacing:.05em; font-weight:500;
+  }
+  .cover-title em{font-style:normal; color:var(--accent);}
+  .cover-sub{font-family:"Songti SC",Georgia,serif; font-size:13px; letter-spacing:.3em; color:var(--dim); margin-top:16px;}
+  .rule{width:44px; height:1px; background:linear-gradient(90deg,transparent,rgba(198,95,31,.7),transparent); margin:28px auto;}
+  .cover-desc{font-size:13.5px; line-height:2; color:var(--dim); max-width:300px;}
+
+  .btn{
+    margin-top:38px; width:100%; max-width:300px; height:54px; border:none; border-radius:100px;
+    background:linear-gradient(100deg,#f09a3e,#e2601f); color:#fff; font-size:15.5px; font-weight:600; letter-spacing:.12em;
+    box-shadow:0 10px 30px rgba(226,96,31,.32), inset 0 1px 0 rgba(255,255,255,.35);
+    cursor:pointer; transition:transform .18s, box-shadow .18s;
+  }
+  .btn:active{transform:scale(.97); box-shadow:0 6px 18px rgba(226,96,31,.26);}
+  .btn.ghost{background:transparent; border:1px solid var(--line); color:var(--ink); box-shadow:none;}
+  .btn.ghost:active{background:rgba(84,66,48,.06);}
+  .cover-foot{margin-top:22px; font-size:11px; color:var(--dim2); letter-spacing:.08em;}
+
+  /* ---------- 提取码 ---------- */
+  #gate{justify-content:center;}
+  .gate-box{
+    border:1px solid var(--line); background:var(--glass); border-radius:24px;
+    padding:34px 26px 30px; backdrop-filter:blur(14px); text-align:center;
+    animation:fadeUp .5s both; box-shadow:0 18px 50px rgba(90,70,45,.12);
+  }
+  .gate-box h2{font-family:"Songti SC",Georgia,serif; font-size:21px; font-weight:500; letter-spacing:.1em;}
+  .gate-box p{font-size:12.5px; color:var(--dim); margin-top:12px; line-height:1.9;}
+  .code-input{
+    margin:26px auto 4px; display:block; width:100%; max-width:250px; height:58px; text-align:center;
+    background:rgba(255,255,255,.6); border:1px solid var(--line); border-radius:14px;
+    color:#8a4a18; font-size:26px; letter-spacing:.55em; text-indent:.55em; font-family:Georgia,serif;
+    outline:none; transition:border-color .2s, box-shadow .2s;
+  }
+  .code-input::placeholder{font-size:14px; letter-spacing:.1em; text-indent:0; color:var(--dim2);}
+  .code-input:focus{border-color:rgba(224,112,47,.6); box-shadow:0 0 0 4px rgba(224,112,47,.12);}
+  .gate-err{height:20px; margin-top:12px; font-size:12px; color:#c2452a; opacity:0; transition:opacity .2s;}
+  .gate-err.show{opacity:1;}
+  .shake{animation:shake .42s;}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+  .gate-back{margin-top:20px; font-size:12px; color:var(--dim2); background:none; border:none; cursor:pointer; letter-spacing:.08em;}
+
+  /* ---------- 答题 ---------- */
+  #quiz{padding-top:0;}
+  .qtop{padding-top:calc(22px + env(safe-area-inset-top)); position:sticky; top:0; z-index:5;
+    background:linear-gradient(180deg,rgba(246,242,234,.95) 0%,rgba(246,242,234,.75) 70%,rgba(246,242,234,0) 100%);
+    backdrop-filter:blur(6px); padding-bottom:10px;}
+  .qbar{height:2px; background:rgba(84,66,48,.14); border-radius:2px; overflow:hidden;}
+  .qbar i{display:block; height:100%; width:0; background:linear-gradient(90deg,#f0a04c,#e2601f); border-radius:2px; transition:width .45s cubic-bezier(.3,.9,.3,1);}
+  .qmeta{display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:11px; letter-spacing:.16em; color:var(--dim2);}
+  .chip{border:1px solid var(--line); border-radius:100px; padding:4px 11px; font-size:10.5px; letter-spacing:.14em; color:#8a6f55;}
+  .qcount{font-family:Georgia,serif; letter-spacing:.1em;}
+  .qcount b{color:var(--accent); font-size:14px;}
+
+  .qbody{flex:1; display:flex; flex-direction:column; padding:14px 0 6px;}
+  /* 用 margin:auto 实现垂直居中：内容不满一屏时居中，溢出时可正常滚动 */
+  .qbody .qtext{margin-top:auto;}
+  .qbody .opts{margin-bottom:auto;}
+  .qtext{font-family:"Songti SC","Noto Serif SC",Georgia,serif; font-size:23px; line-height:1.62; letter-spacing:.02em; font-weight:500; min-height:120px;}
+  .opts{margin-top:26px; display:flex; flex-direction:column; gap:11px;}
+  .opt{
+    display:flex; align-items:flex-start; gap:12px; width:100%; text-align:left;
+    padding:16px 17px; border-radius:15px; cursor:pointer;
+    background:var(--glass); border:1px solid var(--line); color:#4a4238;
+    font-size:14.5px; line-height:1.62; font-family:inherit;
+    transition:background .18s, border-color .18s, transform .14s;
+    opacity:0; animation:optIn .42s cubic-bezier(.22,.9,.24,1) forwards;
+  }
+  @keyframes optIn{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+  .opt:active{transform:scale(.985); background:rgba(255,255,255,.85);}
+  .opt .dot{
+    flex:0 0 auto; width:17px; height:17px; margin-top:2px; border-radius:50%;
+    border:1px solid rgba(84,66,48,.4); position:relative; transition:all .2s;
+  }
+  .opt.sel{border-color:rgba(224,112,47,.8); background:rgba(240,154,62,.14);}
+  .opt.sel .dot{border-color:#e0702f; background:#e0702f; box-shadow:0 0 0 4px rgba(224,112,47,.16);}
+  .opt.sel .dot::after{content:""; position:absolute; inset:5px; border-radius:50%; background:#fff;}
+  .qhint{margin-top:20px; text-align:center; font-size:11px; color:var(--dim2); letter-spacing:.1em;}
+
+  /* ---------- 结果 ---------- */
+  #result{padding-top:calc(18px + env(safe-area-inset-top));}
+  .rpage{display:none; flex-direction:column; flex:1;}
+  .rpage.on{display:flex; animation:pageIn .5s cubic-bezier(.22,.9,.24,1) both;}
+  @keyframes pageIn{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+
+  .photo-wrap{position:relative; border-radius:20px; overflow:hidden; aspect-ratio:4/5; max-height:56vh; background:#d8d2c6;
+    box-shadow:0 24px 55px rgba(90,70,45,.28), 0 0 0 1px rgba(84,66,48,.1);}
+  .photo-wrap img{width:100%; height:100%; object-fit:cover; display:block;}
+  .photo-wrap img.hide{display:none;}
+  .photo-ph{
+    position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px;
+    background:linear-gradient(160deg,#f2ecdf 0%,#e2d4c0 55%,#d4b894 100%);
+  }
+  .photo-ph.show{display:flex;}
+  .photo-ph .big{font-family:"Songti SC",Georgia,serif; font-size:22px; color:rgba(90,60,30,.4); letter-spacing:.12em;}
+  .photo-ph .small{font-size:10.5px; color:rgba(90,60,30,.32); letter-spacing:.14em;}
+  .photo-wrap::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg,rgba(20,12,4,.05) 40%,rgba(20,12,4,.76) 100%);}
+  .photo-cap{position:absolute; left:0; right:0; bottom:0; padding:22px 20px 20px; z-index:2;}
+  .photo-cap .country{font-size:11px; letter-spacing:.4em; color:#ffd9ac; text-transform:uppercase;}
+  .photo-cap .city{font-family:"Songti SC","Noto Serif SC",Georgia,serif; font-size:31px; line-height:1.2; margin-top:9px; letter-spacing:.06em; color:#fff; text-shadow:0 4px 24px rgba(0,0,0,.55);}
+  .photo-cap .en{font-size:10.5px; color:rgba(255,255,255,.5); letter-spacing:.2em; margin-top:8px;}
+
+  .intro{margin-top:20px; text-align:center; font-family:"Songti SC","Noto Serif SC",Georgia,serif;
+    font-size:14.5px; color:#6f6353; letter-spacing:.08em; line-height:1.9;}
+  .intro::before{content:"「"; color:var(--accent);}
+  .intro::after{content:"」"; color:var(--accent);}
+
+  .rlabel{display:flex; align-items:center; gap:10px; font-size:10.5px; letter-spacing:.34em; color:#9a8c7a; margin-bottom:14px;}
+  .rlabel::after{content:""; flex:1; height:1px; background:linear-gradient(90deg,rgba(84,66,48,.2),transparent);}
+  .rblock{margin-top:30px;}
+  .rbig{font-family:"Songti SC","Noto Serif SC",Georgia,serif; font-size:25px; letter-spacing:.06em; line-height:1.4; color:#8a4a18;}
+  .rtext{font-size:14px; line-height:2.05; color:#57503f; margin-top:12px;}
+
+  .ring-wrap{display:flex; flex-direction:column; align-items:center; justify-content:center; padding:14px 0 0;}
+  .ring{position:relative; width:200px; height:200px;}
+  .ring::before{content:""; position:absolute; inset:-24px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,255,255,.75) 0%, rgba(255,255,255,.35) 55%, rgba(255,255,255,0) 74%);}
+  .ring svg{position:relative; transform:rotate(-90deg);}
+  .ring-num{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+  .ring-num b{position:relative; font-family:Georgia,serif; font-size:54px; line-height:1; color:#3b332a; letter-spacing:-.02em;}
+  .ring-num b i{font-style:normal; font-size:21px; color:#c65f1f;}
+  .ring-num span{position:relative; font-size:10.5px; letter-spacing:.3em; color:#9a8c7a; margin-top:10px;}
+  .ring-tip{text-align:center; font-size:13px; color:#6f6558; line-height:2; margin-top:20px;}
+
+  .rfoot{margin-top:auto; padding-top:26px; display:flex; flex-direction:column; align-items:center; gap:14px;}
+  .rnav{width:100%; height:52px; border-radius:100px; border:none;
+    background:linear-gradient(100deg,#f09a3e,#e2601f); color:#fff; font-size:14.5px; font-weight:600; letter-spacing:.14em;
+    cursor:pointer; font-family:inherit; box-shadow:0 8px 24px rgba(226,96,31,.28); transition:transform .18s;}
+  .rnav:active{transform:scale(.98);}
+  .dots{display:flex; gap:7px;}
+  .dots i{width:5px; height:5px; border-radius:50%; background:rgba(84,66,48,.25); transition:all .3s;}
+  .dots i.on{background:#e0702f; width:16px; border-radius:3px;}
+  .restart{font-size:12px; color:var(--dim2); background:none; border:none; letter-spacing:.1em;}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="grain"></div>
+
+<main class="app">
+  <!-- 封面 -->
+  <section class="screen active" id="cover">
+    <div class="kicker">Soul Geography Test</div>
+    <h1 class="cover-title">你的精神故乡<br><em>在世界哪个角落</em></h1>
+    <div class="cover-sub">WHERE YOUR SOUL BELONGS</div>
+    <div class="rule"></div>
+    <p class="cover-desc">有些地方你没去过，却总觉得该在那里生活过。<br>26 个问题，找到你灵魂的经纬度。</p>
+    <button class="btn" id="startBtn">开始测试</button>
+    <div class="cover-foot">请保证独自完成，第一直觉最准</div>
+  </section>
+
+  <!-- 提取码 -->
+  <section class="screen" id="gate">
+    <div class="gate-box">
+      <h2>请输入提取码</h2>
+      <p>本测试为私密分享<br>请输入发起人提供的 4 位提取码</p>
+      <input class="code-input" id="codeInput" type="tel" inputmode="numeric" maxlength="6" placeholder="四位数字" autocomplete="off">
+      <div class="gate-err" id="gateErr">提取码不正确，再看看？</div>
+      <button class="btn" id="gateBtn" style="margin-top:6px;">进入测试</button>
+      <button class="gate-back" id="gateBack">返回</button>
+    </div>
+  </section>
+
+  <!-- 答题 -->
+  <section class="screen" id="quiz">
+    <div class="qtop">
+      <div class="qbar"><i id="qbarFill"></i></div>
+      <div class="qmeta">
+        <span class="chip" id="qType">情境题</span>
+        <span class="qcount"><b id="qNow">01</b> / 26</span>
+      </div>
+    </div>
+    <div class="qbody">
+      <div class="qtext" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+    </div>
+    <div class="qhint">选择最接近你的那一个，不用想太久</div>
+  </section>
+
+  <!-- 结果：3 页 -->
+  <section class="screen" id="result">
+    <!-- 第 1 页：照片 + 风土介绍 -->
+    <div class="rpage on" id="rp0">
+      <div class="photo-wrap">
+        <img id="rImg" alt="">
+        <div class="photo-ph" id="rPh">
+          <div class="big" id="phCity"></div>
+          <div class="small">把照片放到 images/ 目录即可显示</div>
+        </div>
+        <div class="photo-cap">
+          <div class="country" id="rCountry"></div>
+          <div class="city" id="rCity"></div>
+          <div class="en" id="rEn"></div>
+        </div>
+      </div>
+      <div class="intro" id="rIntro"></div>
+      <div class="rfoot">
+        <button class="rnav" id="rNext0">继续看下去</button>
+        <div class="dots" id="dots0"></div>
+      </div>
+    </div>
+
+    <!-- 第 2 页：灵魂匹配度 + 灵魂气质 + 理想生活 -->
+    <div class="rpage" id="rp1">
+      <div class="rblock" style="margin-top:6px;">
+        <div class="rlabel">灵魂匹配度</div>
+      </div>
+      <div class="ring-wrap">
+        <div class="ring">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="88" fill="none" stroke="rgba(84,66,48,.14)" stroke-width="2"></circle>
+            <circle id="ringArc" cx="100" cy="100" r="88" fill="none" stroke="url(#g1)" stroke-width="3.5"
+                    stroke-linecap="round" stroke-dasharray="552.9" stroke-dashoffset="552.9"></circle>
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#f2b264"/>
+                <stop offset="60%" stop-color="#ef8f3c"/>
+                <stop offset="100%" stop-color="#dd5f24"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="ring-num"><b><span id="pctNum">0</span><i>%</i></b><span>SOUL MATCH</span></div>
+        </div>
+        <p class="ring-tip" id="pctTip"></p>
+      </div>
+      <div class="rblock">
+        <div class="rlabel">灵魂气质</div>
+        <div class="rbig" id="rArch"></div>
+        <p class="rtext" id="rArchDesc"></p>
+      </div>
+      <div class="rblock">
+        <div class="rlabel">理想生活</div>
+        <p class="rtext" id="rDay"></p>
+      </div>
+      <div class="rfoot">
+        <button class="rnav" id="rNext1">继续</button>
+        <div class="dots" id="dots1"></div>
+      </div>
+    </div>
+
+    <!-- 第 3 页：内心需求 + 隐藏的一面 + 共振 -->
+    <div class="rpage" id="rp2">
+      <div class="rblock" style="margin-top:6px;">
+        <div class="rlabel">内心需求</div>
+        <p class="rtext" id="rNeed"></p>
+      </div>
+      <div class="rblock">
+        <div class="rlabel">隐藏的一面</div>
+        <p class="rtext" id="rHidden"></p>
+      </div>
+      <div class="rblock">
+        <div class="rlabel">你们之间的共振</div>
+        <p class="rtext" id="rSync"></p>
+      </div>
+      <div class="rfoot">
+        <button class="rnav" id="rAgain">再测一次</button>
+        <div class="dots" id="dots2"></div>
+        <div class="restart">把这一页截图，分享你的精神故乡</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ===================== 数据 ===================== */
+/* 维度: n自然荒野 p慢节奏 s独处 a艺术 m宁静治愈 d市井烟火 g远方漂泊 y精神灵性 c寒冷 e繁复华丽 h古旧 w温甜 */
+
+const DIMS = ["n","p","s","a","m","d","g","y","c","e","h","w"];
+
+const QUESTIONS = [
+  { t:"情境", q:"周五晚上，你在一座陌生小城突遇暴雨，手机也快没电了，你会：", o:[
+    ["钻进街角亮着暖灯的小酒馆，听隔壁桌聊天", {d:3,s:-2,m:1,w:2}],
+    ["找一家还开着的旧书店或小展馆，躲进另一个世界", {a:3,s:2,h:2,y:1}],
+    ["把外套往头上一罩，走进雨里随便走走", {n:3,g:2,c:1,p:1}],
+    ["立刻查最近一班车，回到熟悉的地方", {y:1,s:1,m:-1,w:-1}],
+    ["找家本地菜馆，认真吃顿热的，雨停再说", {d:3,m:2,w:2}],
+    ["找个屋檐坐下，什么都不做，就看雨", {s:3,m:2,y:2,g:1}]
+  ]},
+  { t:"情境", q:"你意外获得一个月带薪长假，你会怎么用？", o:[
+    ["只去一个地方，住满一个月，像本地人一样生活", {p:3,d:2,s:1,h:2}],
+    ["走一条有名的高难度徒步线，把体力用尽", {n:3,g:2,m:-2,c:2}],
+    ["把想看的博物馆和美术馆一次看完", {a:3,h:3,y:1}],
+    ["报个静修营，一个月不看新闻、不社交", {y:3,s:3,m:2,e:-1,d:-2}],
+    ["没有路线，开到哪睡到哪", {g:3,n:2,m:-1,s:1}],
+    ["回家陪家人，把欠下的时间补回来", {w:3,d:2,s:-2,g:-2}]
+  ]},
+  { t:"情境", q:"你搬进一座新城市，第一个晚上最想做的事是：", o:[
+    ["去菜市场或超市，把冰箱填满", {d:3,w:2,p:1}],
+    ["出门乱走，把附近街区摸熟", {g:2,s:1,m:-1,n:1}],
+    ["先把房间布置成自己喜欢的样子", {a:2,s:2,e:2,m:1}],
+    ["找个人聊天，问清楚哪里好吃好玩", {d:3,s:-3,w:2,m:-1}],
+    ["点份外卖，窝着看窗外的人间烟火", {d:2,s:1,m:2,w:1}],
+    ["爬到高处，看一眼整座城市的夜色", {g:2,y:2,s:2,n:1}]
+  ]},
+  { t:"情境", q:"旅途中你错过了末班车，你会：", o:[
+    ["又气又笑，觉得这才是旅行该有的样子", {g:3,m:-2,n:1,y:1}],
+    ["立刻打开手机，冷静地找替代方案", {y:2,s:1,m:-2}],
+    ["就地找家民宿住下，顺便逛逛小镇夜色", {p:2,m:2,d:1,w:2}],
+    ["给刚认识的旅伴打电话求助", {s:-3,w:2,m:-1}],
+    ["把包往候车室一放，写会儿东西", {a:2,s:3,h:1}],
+    ["索性坐到天亮，看这座城市怎么入睡", {y:2,s:2,a:1,m:1}]
+  ]},
+  { t:"情境", q:"你的生日，你最想要的过法是：", o:[
+    ["叫上一大桌朋友，闹到深夜", {s:-3,d:3,w:2,m:-2}],
+    ["一个人去看一场日出，为自己庆祝", {n:3,s:3,m:2,g:1}],
+    ["和一两个最亲的人，安静吃顿好饭", {w:3,m:2,d:2,s:1}],
+    ["请一天假，去做一件一直想做的事", {y:2,g:2,m:-1}],
+    ["在旅行中过，给自己买一束花", {w:2,a:2,g:2,m:1}],
+    ["谁也不告诉，像平常一样过完", {s:3,m:2,e:-1,y:1}]
+  ]},
+  { t:"情境", q:"朋友约你去一个你完全没兴趣的地方，你会：", o:[
+    ["兴致勃勃地去，人比地方重要", {s:-3,w:3,d:2}],
+    ["委婉拒绝，把周末留给自己", {s:3,p:2,m:2}],
+    ["去就去，到了自己找乐子", {g:2,s:1,a:1}],
+    ["直说没兴趣，但另约一件两个人都爱做的事", {y:3,s:1,m:-1}],
+    ["看当天心情再决定", {p:2,g:1,m:1}],
+    ["提议换个折中的地方，大家都别为难", {w:2,d:1,m:1,s:-1}]
+  ]},
+  { t:"情境", q:"在陌生城市手机没电了，你会：", o:[
+    ["有点慌，赶紧找人借充电器", {s:-2,m:-2,y:1}],
+    ["太好了，干脆彻底失联地过一天", {s:3,g:3,n:2,m:1}],
+    ["买份纸质地图，用嘴问路，反而好玩", {d:2,y:1,g:1,s:-1}],
+    ["找家咖啡馆坐一下午，正好看书", {a:3,m:3,e:-1,p:1}],
+    ["沿着一条河或一条路一直走下去", {n:3,g:2,s:2}],
+    ["早点回住处，泡个热水澡睡觉", {m:3,p:2,d:1,s:1}]
+  ]},
+  { t:"情境", q:"一个人旅行时，你典型的一天是：", o:[
+    ["睡到自然醒，带本书到处晃晃，没有计划", {p:3,a:2,s:2,m:1}],
+    ["早起看日出，然后走十几公里，走到腿软", {n:4,c:2,g:2,m:-1}],
+    ["泡在博物馆和美术馆里，脚不沾地", {a:4,h:3,e:2}],
+    ["钻进人堆里，和小贩、店主、陌生人聊天", {d:4,s:-3,m:-2,w:2}],
+    ["什么都不安排，坐着发呆，想出门才出门", {s:3,p:3,m:2,y:1}],
+    ["把每个打卡点都刷一遍，吃顿好的，回酒店泡澡", {d:2,m:-1,g:1,y:1}]
+  ]},
+  { t:"情境", q:"受了委屈、累到极点的一天，你的解药是：", o:[
+    ["找人说说话，或者在饭桌上喝一杯", {s:-2,d:3,w:2,m:-1}],
+    ["关机，一个人待着，把自己重新充满", {s:3,m:3,g:1}],
+    ["放音乐、洗热水澡、早点睡，明天再说", {m:3,p:2}],
+    ["出去夜跑或去健身房，把情绪练出去", {n:1,m:-2,y:1,g:1}],
+    ["点外卖、看剧、好好犒劳自己一顿", {m:2,d:2,w:2,p:1}],
+    ["听很丧的歌，写下来，把情绪嚼碎", {a:3,s:2,y:2,m:-1}]
+  ]},
+  { t:"情境", q:"老板突然给你放一周假，你的第一反应是：", o:[
+    ["立刻订机票，先离开这里再说", {g:3,m:-2,s:1}],
+    ["连睡三天，然后慢慢缓过来", {p:3,m:3,s:1}],
+    ["终于可以把积压的书和电影清掉", {a:3,h:2,y:1,s:1}],
+    ["约老朋友，一顿一顿地吃回来", {d:3,s:-2,w:2,m:-1}],
+    ["去做那件拖了很久的事", {y:3,m:-1}],
+    ["去哪不重要，重要的是一定要出门看天", {n:3,g:2,m:1}]
+  ]},
+  { t:"情境", q:"跌进低谷时，你的自救方式更像：", o:[
+    ["找个明白人聊聊，把碎片拼回去", {y:2,w:2,s:-1,m:1}],
+    ["消失一阵，走得很远，让距离把它冲淡", {g:3,n:3,s:3}],
+    ["用具体的事把自己填满，麻木也是一种办法", {d:1,y:1,m:-1,p:1}],
+    ["躲进书、电影、画里，美能治人", {a:3,y:2,s:2,e:1}],
+    ["大哭一场，发泄出来，然后站起来", {w:1,s:-1,m:-2}],
+    ["先睡好觉，能睡着就没什么大事", {m:3,p:2}]
+  ]},
+  { t:"情境", q:"有人送你一年免租的房子，你选哪一套？", o:[
+    ["山里湖边的小木屋，窗外半年是雪", {n:3,c:3,s:2,m:2}],
+    ["老城最热闹街区里的一间老房子", {d:4,s:-2,h:2,m:-1}],
+    ["安静小巷里的百年老宅，带一个天井", {h:3,a:2,p:2,s:2}],
+    ["艺术区里的房子，楼下是画廊和二手店", {a:4,e:2,y:2,h:1}],
+    ["海景悬崖房，最近的邻居开车十分钟", {n:3,s:3,g:2,c:2}],
+    ["一辆房车，随时可以换地方", {g:4,s:2,m:-1}]
+  ]},
+  { t:"情境", q:"理想的清晨，你希望被什么叫醒？", o:[
+    ["山谷里透过窗子的鸟叫和风", {n:4,c:2,m:3}],
+    ["窗外的市井声，和楼下蒸笼掀开的响动", {d:4,m:-1,w:2,s:-1}],
+    ["远远的钟声，寺庙或教堂的", {y:3,h:3,m:2,s:1}],
+    ["没有闹钟，自然醒，光落在床角", {p:3,m:3,s:1}],
+    ["雨打屋顶的声音，天很暗，可以继续懒", {m:3,s:2,c:2,p:2}],
+    ["街市飘来的面包、咖啡和香料味", {d:3,w:2,e:1,m:-1}]
+  ]},
+
+  { t:"价值观", q:"对你来说，理想的工作状态更接近：", o:[
+    ["自由职业，在哪都能干活，随时可以换城市", {g:4,m:-1,s:1}],
+    ["稳定体面，下班后的时间完全属于自己", {p:2,m:1,y:1,d:1}],
+    ["和一群有意思的人，做一件真心热爱的事", {s:-2,w:2,y:2,m:-1}],
+    ["工作就是作品，愿意为它熬通宵", {a:3,y:3,e:2,m:-3}],
+    ["钱少一点但清闲，有大把时间好好生活", {p:3,m:2,d:1}],
+    ["在旷野里工作——牧场、营地、海上", {n:4,g:3,c:2,s:2}]
+  ]},
+  { t:"价值观", q:"三十年后回头看，你最不能接受的是：", o:[
+    ["一辈子没离开过同一个地方", {g:3,n:1}],
+    ["没有一件真正拿得出手的热爱", {a:3,y:2}],
+    ["从来没有热烈地活过、爱过", {m:-3,w:2,s:-1}],
+    ["从来没有真正独处过、想清楚过", {s:3,y:2}],
+    ["从来没有把日子过成自己喜欢的样子", {p:2,d:2,m:1}],
+    ["没有抵达过任何一个非去不可的地方", {g:3,n:2,y:1}]
+  ]},
+  { t:"价值观", q:"你更认同哪一种「富有」？", o:[
+    ["有大把可以浪费的时间", {p:4,m:2}],
+    ["有随时出发的自由", {g:3,s:1,n:1}],
+    ["有值得托付的人，和一张热闹的饭桌", {w:3,d:3,s:-2}],
+    ["有丰富的精神世界，一个人也不空虚", {a:3,y:3,s:2}],
+    ["有说走就走的底气和存款", {g:2,y:2,m:-1}],
+    ["有一门愿意做到老的手艺", {a:2,h:2,p:2,d:1}]
+  ]},
+  { t:"价值观", q:"关于「家」，你的理解更像：", o:[
+    ["家是有人在等你，灯为你亮着", {w:3,s:-2,d:2}],
+    ["家是你随身带着的状态，走到哪都在", {g:3,s:1,y:1}],
+    ["家是你亲手布置的、最喜欢的那个空间", {a:3,e:2,m:1}],
+    ["家是故乡，是一个回得去的地方", {h:2,d:2,y:1,p:1}],
+    ["家是远方，是你还没抵达的地方", {g:3,s:2,n:1,m:-1}],
+    ["家就是你自己，心安处即是家", {y:3,s:2,m:2}]
+  ]},
+  { t:"价值观", q:"关于朋友，你真正想要的是：", o:[
+    ["三两个知己，什么都不说也很自在", {s:2,m:2,y:1,w:1}],
+    ["很多朋友，走到哪都有人一起吃饭", {s:-3,d:4,w:2,m:-1}],
+    ["朋友可有可无，靠自己最踏实", {s:3,y:1,e:-1}],
+    ["一个人能无话不谈，凌晨也能打电话", {w:3,s:-1,y:1}],
+    ["关系顺其自然，谁也不欠谁", {s:2,p:1,y:1}],
+    ["一个能一起去远方、一起冒险的人", {g:3,n:1,m:-1}]
+  ]},
+  { t:"价值观", q:"哪句话最像你手机壁纸，或者半夜会想起的那句？", o:[
+    ["人生是旷野，不是轨道", {g:4,n:2,s:1}],
+    ["慢一点，生活不是一场比赛", {p:4,m:2}],
+    ["所有的安静，都是为了那一次发光", {y:3,a:2,m:-2}],
+    ["人生得意须尽欢，先吃顿热乎的", {d:3,m:-2,s:-1,w:2}],
+    ["读万卷书，行万里路", {a:2,h:2,g:2}],
+    ["无所求，便无所惧", {y:3,s:2,e:-1,m:2}]
+  ]},
+  { t:"价值观", q:"你绝对不能接受的那种生活是：", o:[
+    ["一眼看到头，每天都是复制粘贴", {g:3,m:-2,n:1}],
+    ["忙到没有时间呼吸，生活被压成一张纸", {p:4,m:3}],
+    ["房间冷冰冰的，没有人间温度", {w:3,d:2,s:-2,m:-1}],
+    ["表面上精致，精神世界却一片荒芜", {y:4,a:2,e:1}],
+    ["孤独到和任何人都没有连接", {s:-3,w:2,m:-2}],
+    ["只有一种美，只容得下一种审美", {a:3,e:2,g:1}]
+  ]},
+  { t:"价值观", q:"别人说「你过得很好」，你希望那指的是：", o:[
+    ["自由得要命，没人能管住", {g:4,s:2,m:-1}],
+    ["把日子过出质感，有本事也有耐心", {p:3,a:2,d:2,h:1}],
+    ["能和孤独好好相处，一个人也很清楚", {s:3,m:2,y:2}],
+    ["温暖有人情味，让人想靠近", {w:4,d:3,s:-3}],
+    ["精神世界很强大，看到了别人看不到的维度", {y:4,a:2,s:1}],
+    ["敢冒险，去过别人不敢去的地方", {n:3,g:3,m:-2}]
+  ]},
+
+  { t:"审美投射", q:"下面几个画面，你最想走进去的是：", o:[
+    ["风暴过后的海边，悬崖上独自亮着的一盏灯塔", {n:3,s:3,g:3,y:2,c:2}],
+    ["深夜食堂，雾气腾腾的一碗面", {d:4,m:1,w:3,s:-1}],
+    ["美术馆里，一束光正好打在大理石雕像上", {a:4,e:3,y:2,h:2}],
+    ["草原尽头，一顶亮着灯的帐篷", {n:4,g:3,s:2,m:2}],
+    ["老城区的清晨，蒸笼掀开白雾的那一瞬间", {d:4,w:3,m:1,s:-1}],
+    ["雪夜列车车窗，映着自己模糊的倒影", {s:3,g:2,c:3,a:1,m:1}]
+  ]},
+  { t:"审美投射", q:"你心里「完美的一天」，光线应该是：", o:[
+    ["清晨薄雾里的柔光，世界还没睡醒", {m:3,p:2,c:2}],
+    ["正午的顶光，热烈到睁不开眼", {m:-3,d:1,w:1}],
+    ["傍晚的金色斜阳，万物都被镀上琥珀", {a:3,w:2,m:2,h:1}],
+    ["蓝调时刻，天空深蓝、窗户亮着灯", {a:2,m:2,w:2,e:1}],
+    ["夜晚的月光和星空，安静到能听见自己", {s:3,y:3,n:3,c:2}],
+    ["阴天，云层压得很低，像老电影的滤镜", {m:2,s:2,y:2,h:1,c:1}]
+  ]},
+  { t:"审美投射", q:"什么样的空间会让你心动？", o:[
+    ["落地窗外是无边荒野的小屋", {n:4,s:2,m:2}],
+    ["挤满旧物和故事的古董店", {a:3,h:3,e:2,d:1}],
+    ["挑高穹顶、有回声的教堂或美术馆", {a:3,y:3,h:3,e:2}],
+    ["洞穴、地窖、树屋——住在自然里的房子", {n:3,s:2,c:2,m:2}],
+    ["烟火气十足的老巷弄小院", {d:4,w:3,s:-2}],
+    ["极简到只剩一张床和一扇大窗", {e:-3,s:3,m:2,a:1}]
+  ]},
+  { t:"审美投射", q:"哪种声音最治愈你？", o:[
+    ["海浪，或者风穿过山谷", {n:4,m:3,c:2}],
+    ["深夜街头的车声和人声", {d:3,m:-2,s:-1}],
+    ["咖啡机、翻书页、雨打窗沿", {a:2,m:3,p:2}],
+    ["听不懂歌词的外语歌，或者老唱片", {a:3,h:2,s:1,m:1}],
+    ["篝火噼啪、冰面开裂、雪落下的声音", {n:3,c:3,s:2,m:2}],
+    ["寺庙钟声、教堂唱诗、诵经声", {y:4,h:3,m:2,s:1}]
+  ]},
+  { t:"审美投射", q:"如果只能留下一种配色，你会选：", o:[
+    ["深海蓝与极光绿", {n:3,c:3,s:1,y:1}],
+    ["赭红、仙人掌绿、沙漠日落橙", {n:2,g:2,a:1,m:-1,c:-2}],
+    ["黑白灰与米白", {e:-3,a:2,s:2,m:1}],
+    ["玫红、亮黄、电光蓝，浓烈到不讲道理", {m:-3,e:2,d:2,s:-1}],
+    ["莫兰迪色，温柔、克制、低饱和", {a:3,m:3,p:1,e:-1}],
+    ["朱红与石青，旧时的中国色", {h:4,a:3,y:2}]
+  ]}
+];
+
+const LOCATIONS = [
+  { id:"01", city:"雷克雅未克", country:"冰岛", en:"Reykjavík, Iceland",
+    v:{n:5,p:4,s:5,a:2,m:3,d:1,g:5,y:2,c:5,e:1,h:1,w:1},
+    arch:"远方灯塔",
+    intro:"地热温泉之城，冰岛人把寂静过成了日常。",
+    archDesc:"你是人群里最安静、也最不可替代的那一个。你的存在感不靠音量，而像远处海岸的一束光——不喧哗，但一直亮着。你不擅长寒暄和客套，可一旦有人真正走近，会发现你比谁都可靠。你早就想明白了：热闹是别人定义的好，安静才是你自己的富足。",
+    day:"清晨被雨声叫醒，煮一壶黑咖啡，看极光退场后留下的那点余晖。上午去海边走很久，风大得能把所有心事吹散。下午在旧书店的木地板上翻几页诗，晚上窝在沙发里，看天色一点点沉下去，手机静音，世界只剩你和海。",
+    need:"你需要一片足够辽阔的天地，来安放同样辽阔的内心。你向往的不是逃离人群，而是终于可以不用表演——不用把话说得漂亮，不用把表情管理得体。在辽阔面前，你只需要做你自己，就已经足够完整。",
+    hidden:"你看起来冷淡疏离，其实内心滚烫。你只是早就学会了一件事：把最柔软的部分，留给极少数真正接得住的人。你不是不会爱，你是不肯把爱浪费在不重要的场面上。" },
+
+  { id:"02", city:"京都", country:"日本", en:"Kyoto, Japan",
+    v:{n:1,p:5,s:3,a:5,m:4,d:3,g:1,y:5,c:2,e:1,h:5,w:3},
+    arch:"侘寂诗人",
+    intro:"一茶一饭皆有礼，旧物与时间被郑重对待。",
+    archDesc:"你在不完美里看见美，在旧物里看见时间。你的灵魂是收敛的，像一枚被岁月磨圆的茶碗——不锋利，却温润耐看。你讨厌喧哗的表达，相信真正重要的东西都该轻声说。别人觉得你淡，其实你只是把浓烈，都收进了留白里。",
+    day:"清晨五点半沿鸭川慢跑，薄雾还挂在水面上。上午在百年町屋里写字、喝茶，听窗外的雨从密到疏。午后走进一家只有六个座位的荞麦面店，黄昏在庭院里扫落叶——不为干净，只为那声沙沙。",
+    need:"你需要秩序感与留白。世界越快，你越想慢下来：东西要少而精，日子要简而深。你要的不是逃离生活，而是把生活过成一杯需要慢慢品的茶——第一口也许平淡，回味却很长。",
+    hidden:"你看似随和好说话，其实心里有非常固执的底线。只是那些底线你从不用嘴说，只用行动守着——你拒绝的方式很轻，轻到对方过后才反应过来，你已经悄悄转身了。" },
+
+  { id:"03", city:"马拉喀什", country:"摩洛哥", en:"Marrakech, Morocco",
+    v:{n:1,p:2,s:0,a:4,m:1,d:5,g:2,y:2,c:0,e:4,h:4,w:1},
+    arch:"一千零一夜的说书人",
+    intro:"集市昼夜不息，故事在这里比水更流动。",
+    archDesc:"你心里住着无数个故事。热闹、曲折、色彩浓烈——你最怕一眼望到头的生活。你天生会被集市、香料和陌生人吸引，因为你相信活着就该有声有味。你的记性很好，尤其是那些别人随口一说、你却记了很多年的细节。",
+    day:"清晨在露台上被鸽子和宣礼声唤醒，喝一杯薄荷茶。上午钻进老城的迷宫小巷，为一块手工地毯和商贩笑闹着砍价。下午在庭院里躲太阳，听喷泉叮咚。夜里走进德吉玛广场，烤肉的烟火和耍蛇人的鼓点一起升起来——你觉得自己活在一部永不散场的电影里。",
+    need:"你需要浓烈的、有温度的生活质感。你怕的不是辛苦，是乏味——重复的日程、没有悬念的日子，对你来说才是真正的消耗。你要每天睁开眼，都觉得今天会有点不一样。",
+    hidden:"你用热闹包裹自己，其实你最怕的是散场。曲终人空的那一刻，你会突然安静下来——你真正想要的，是散场之后还有人留下来，记得你的名字，问你今天过得好不好。" },
+
+  { id:"04", city:"皇后镇", country:"新西兰", en:"Queenstown, New Zealand",
+    v:{n:5,p:2,s:2,a:1,m:0,d:2,g:5,y:1,c:3,e:1,h:0,w:2},
+    arch:"追风的冒险家",
+    intro:"把冒险过成日常，心跳与安逸各占一半。",
+    archDesc:"你的心跳需要一个刻度更高的坐标。别人追求安稳，你追求「活着的实感」——风吹在脸上、心跳在喉咙里的那种实感。你不怕摔，怕的是一直站在原地。你身上有一种很少见的组合：胆子极大，心却极软。",
+    day:"清晨跳进冷冽的湖水里，激得整个人瞬间清醒。上午蹦极或者徒步，把心跳顶到最高。下午在湖边长椅上啃三明治，看滑翔伞一朵朵开在天上。傍晚烤一炉饼干，抱着狗看瓦卡蒂普湖变成金色——冒险和安逸，你两个都要。",
+    need:"你需要自由和挑战。安逸对你来说不是幸福，是一种缓慢的窒息。你要的其实很具体：每隔一段时间，就有一件让你手心出汗、又跃跃欲试的事，在前方等你。",
+    hidden:"你看起来天不怕地不怕，其实你比谁都渴望一个「回来时灯还亮着」的地方。你冒险不是不要家，恰恰相反——你想要一个配得上你的勇敢的家。" },
+
+  { id:"05", city:"里斯本", country:"葡萄牙", en:"Lisbon, Portugal",
+    v:{n:3,p:4,s:1,a:4,m:2,d:5,g:1,y:3,c:2,e:3,h:4,w:4},
+    arch:"甜蜜的忧郁者",
+    intro:"法朵慢唱旧时光，告别在这里也是一种美。",
+    archDesc:"你骨子里有一种叫 Saudade 的东西——怀念着还没发生的事。你美就美在那点微微的遗憾：你看什么都像在看回忆，连快乐都带着一点旧照片的滤镜。这不是矫情，这是你感知世界的分辨率，比一般人高得多。",
+    day:"清晨在 28 路电车上摇摇晃晃地爬坡，阳光透过旧车窗一格一格打在脸上。上午在观景台喝一杯咖啡，听远处飘来的法朵。下午在瓷砖老墙下晒太阳、写一封不会寄出的信。傍晚整座城铺满金色斜阳，你忽然有点想哭，又觉得挺幸福。",
+    need:"你需要被允许感伤。你的柔软不是软弱，是你感知世界的方式。你不需要有人来把你「救」出情绪，你只需要一个不催你、不评你、愿意陪你坐一会儿的人。",
+    hidden:"你总笑着说「没关系」，其实你记得每一句没说出口的告别。你把眼泪都调成了静音模式——不是不难过，是你舍不得让爱你的人跟着难过。" },
+
+  { id:"06", city:"罗弗敦群岛", country:"挪威", en:"Lofoten, Norway",
+    v:{n:5,p:4,s:5,a:2,m:4,d:0,g:4,y:2,c:5,e:1,h:2,w:1},
+    arch:"极夜隐士",
+    intro:"渔屋面海而立，人和风雪互不打扰。",
+    archDesc:"你需要的是彻底的安静。不是寂寞，而是与世界保持一段刚刚好的距离——近到能看见人间灯火，远到听不见喧哗。你在人多的场合耗电很快，但你从不觉得自己孤僻：你只是把社交的电量，省给了真正重要的人。",
+    day:"住在海边一栋红色小木屋里，清晨看渔船划开镜面一样的海。上午劈柴、煮浓汤、读书。下午在雪山脚下散步，整条路只有你一个人的脚印。夜里推门出去，整片天空的极光像有人在夜幕上作画。",
+    need:"你需要一个不被打扰的角落，来听清自己脑子里的声音。你每天的疲惫，多数不是来自事情本身，而是来自「不得不回应」。你要的其实很少：一段没人找你的时间，一个不用解释的状态。",
+    hidden:"你不是不热爱人类——你只是需要先在孤独里把自己充满，才有能力温柔地走向别人。懂你的人都知道：你安静时的陪伴，比很多热闹都更像陪伴。" },
+
+  { id:"07", city:"佛罗伦萨", country:"意大利", en:"Florence, Italy",
+    v:{n:0,p:3,s:1,a:5,m:2,d:3,g:1,y:4,c:2,e:5,h:5,w:3},
+    arch:"文艺复兴学徒",
+    intro:"街头巷尾皆文艺，美是这里的生产资料。",
+    archDesc:"你为美而生。你的眼睛会本能地停在穹顶、壁画和雕塑上，你对「粗糙的生活」有一点挑剔——不是挑剔物质，是挑剔质感。你相信人应该活得像一件被认真做出来的东西：有比例、有细节、有耐心。",
+    day:"清晨在老桥上看阿诺河变成金红色。上午在乌菲兹排队，站在波提切利的画前一小时说不出话。下午在皮具作坊里看老师傅敲敲打打。傍晚买一瓶基安蒂，坐在米开朗基罗广场的台阶上，看整座文艺复兴之城在脚下亮灯。",
+    need:"你需要美——不是消费品的美，是那种让人肃然起敬、几百年不朽的美。你要的不只是欣赏它，你心里隐秘的愿望是：总有一天，你也做出一件配得上被记住的东西。",
+    hidden:"你看似文艺淡定，其实野心不小。你想留下点什么，证明自己真的活过——这个念头你很少说出口，但它一直在替你做决定。" },
+
+  { id:"08", city:"大理", country:"中国", en:"Dali, Yunnan, China",
+    v:{n:3,p:5,s:3,a:3,m:4,d:4,g:1,y:3,c:1,e:1,h:2,w:5},
+    arch:"闲云野鹤",
+    intro:"赶集种花晒太阳，日子按自己的节奏长。",
+    archDesc:"你追求的不是「成功」，而是「舒展」。你的人生理想，是把日子过成一潭不着急流走的洱海水。你受不了一切「必须」——必须合群、必须冲刺、必须像个大人。你相信人跟植物一样，有自己的花期，急不来，也不必急。",
+    day:"清晨被苍山的鸟叫醒，去院子里摘两根葱。上午背着背篓赶一次集，买一堆鲜花和菌子。下午在才村的咖啡馆躺着，看云在苍山头上翻滚。傍晚和两三个朋友在院子里烤乳扇、喝风花雪月，聊到月亮爬得很高。",
+    need:"你需要「不慌」。你受够了被时间追着跑：闹钟、绩效，还有永远回不完的消息。你要亲手把生活的节奏抢回来——慢不是懒，慢是你认真活着的证据。",
+    hidden:"你嘴上说躺平，其实心里一直有件想认真做的事。你在等一个足够安心的时候——但你心里也清楚，那个时候不会自己来，你得先给它搭个台阶。" },
+
+  { id:"09", city:"库斯科", country:"秘鲁", en:"Cusco, Peru",
+    v:{n:5,p:3,s:2,a:2,m:3,d:2,g:4,y:5,c:2,e:3,h:5,w:1},
+    arch:"寻梦的朝圣者",
+    intro:"印加古道穿城过，高原人信高山有灵。",
+    archDesc:"你心里一直有一座「必须抵达」的山。你相信有些答案不在书里，而在路上——在高原的风里，在陌生人的眼睛里。别人觉得你折腾，你却知道：有些东西，坐在原地永远等不来。",
+    day:"清晨在印加古道上醒来，帐篷外是云海翻过雪峰。上午沿着石阶慢慢往上，每一步都又累又幸福。午后坐在马丘比丘的梯田上，看云雾把古城藏起来又露出来。晚上回到古城，喝一碗热汤，在篝火边听陌生人讲他的故事。",
+    need:"你需要意义感。你要的不只是风景，是一场能改变自己的抵达。你可以吃苦、可以睡帐篷，但你受不了「不知道为什么而走」。一旦有了答案，你的忍耐力好得惊人。",
+    hidden:"你从不喊累，但你心里清楚：所有看似任性的远行，都是在找一个更完整的自己。你走那么远，其实是为了有一天能回来，跟自己和解。" },
+
+  { id:"10", city:"班夫", country:"加拿大", en:"Banff, Canada",
+    v:{n:5,p:2,s:4,a:0,m:4,d:0,g:4,y:1,c:4,e:1,h:0,w:2},
+    arch:"山野行者",
+    intro:"山是邻居湖是院子，生活以自然为坐标。",
+    archDesc:"你是那种「一进山就会笑」的人。城市的格子间困不住你，你的灵魂尺度和山脉一样大。你不矫情——累归累、抱怨归抱怨，第二天照样第一个爬起来。你的情绪修复能力很强，大自然就是你的充电桩。",
+    day:"清晨在梦莲湖边看十峰山的倒影，冷得跺脚也不想走。上午徒步到山脊，在无人的山口大声喊一嗓子。下午泡在班夫上温泉里，看雪落在头发上。晚上在木屋里炖一锅热汤，窗外偶尔有鹿走过。",
+    need:"你需要真实的世界——风吹在脸上、石头硌着脚的那种真实。屏幕里的风景你一眼都不想多看，你要的是闻得到松树味、踩得到溪水的在场感。",
+    hidden:"你看起来独立坚强，好像一个人也能把日子过好。其实你最珍惜的，是那种「有人陪你走很远的路」的感觉——你只是不太主动说出口。" },
+
+  { id:"11", city:"爱丁堡", country:"苏格兰", en:"Edinburgh, Scotland",
+    v:{n:3,p:3,s:4,a:4,m:2,d:1,g:3,y:4,c:3,e:4,h:5,w:2},
+    arch:"哥特故事讲述者",
+    intro:"旧城石墙藏故事，文学是这里的方言。",
+    archDesc:"你的浪漫里有一点阴影，温柔里有一点锋利。你喜欢的不是阳光明媚，是雾气、老石墙和一点神秘。你说话有分寸，内心戏却极其丰富——你随时都在脑内写小说，只是没告诉任何人。",
+    day:"清晨在王子街花园看城堡从薄雾里显形。上午在二手书店淘一本 1900 年的诗集。下午躲进咖啡馆写作，就在罗琳写《哈利·波特》的那家隔壁。傍晚爬上卡尔顿山，风把大衣吹成斗篷，看整座黑石之城亮起暖黄的灯。",
+    need:"你需要故事感。你不满足于「活着」，你想活成一部值得被讲述的作品——有转折、有暗线、有让人回味的那一笔。平淡的白开水日子，会让你悄悄失望。",
+    hidden:"你外表克制理性，其实想象力早就建成了一整座魔法城堡。你不是不合群，你是把最热闹的那部分自己，留给了深夜和想象力。" },
+
+  { id:"12", city:"圣托里尼", country:"希腊", en:"Santorini, Greece",
+    v:{n:4,p:4,s:1,a:4,m:4,d:1,g:2,y:2,c:1,e:3,h:2,w:4},
+    arch:"白日梦想家",
+    intro:"白墙蓝顶看海，日子简单到只剩美。",
+    archDesc:"你的世界里，现实和梦的比例大概是四比六。你相信生活该像爱琴海——蓝得没有道理，美得不需要理由。你有一套自己的逻辑：好看本身就是意义，心动本身就是理由，不需要向任何人解释。",
+    day:"清晨在蓝顶教堂边的白房子里醒来，阳台正对着火山岛。上午在悬崖步道散步，每个转弯都是一张明信片。下午在泳池边睡午觉，海风把纱帘吹得鼓起来。傍晚守着全世界最好的日落，看白墙一寸寸变成蜜桃色。",
+    need:"你需要纯粹的、不为什么的美。梦想对你来说不是奢侈品，是你呼吸的方式。你可以接受日子简单，但不能接受日子灰暗——哪怕是小房子，也要有面朝大海的窗。",
+    hidden:"你看似乐观没心没肺，其实你比谁都清楚现实的样子。你不是在逃避现实，你是在坚持理想——这件事，没有勇气的人根本做不到。" },
+
+  { id:"13", city:"卡帕多奇亚", country:"土耳其", en:"Cappadocia, Türkiye",
+    v:{n:4,p:3,s:3,a:2,m:3,d:1,g:5,y:4,c:1,e:3,h:4,w:2},
+    arch:"漫游的热气球",
+    intro:"住在岩洞里，清晨和热气球一同醒来。",
+    archDesc:"你不属于任何固定的地方。你的理想状态是像热气球一样——不赶路，也不停留，慢慢地飘。你对世界的胃口很大，对安稳的需求很小。你的行李箱永远半收着，随时可以出发，也随时愿意回来。",
+    day:"凌晨五点爬起来，看一百个热气球在晨光里同时升起，像一场无声的烟花。上午住进洞穴酒店，在亿万年岩石凿出的房间里喝红茶。下午在精灵烟囱之间徒步，捡一块石头留作纪念。夜里躺在露台上，头顶是肉眼可见的银河。",
+    need:"你需要「轻盈」。生活里那些沉甸甸的东西——房贷、职级、别人的期待——你一直在学着轻轻放下。你要的不是没有重量，而是不被重量拖住。",
+    hidden:"你说走就走，看起来潇洒极了。其实每次离开，你都在悄悄回头看——看有没有人舍得你。如果有，你会走得更安心。" },
+
+  { id:"14", city:"布宜诺斯艾利斯", country:"阿根廷", en:"Buenos Aires, Argentina",
+    v:{n:0,p:1,s:0,a:5,m:0,d:5,g:2,y:3,c:2,e:5,h:4,w:3},
+    arch:"探戈舞者",
+    intro:"探戈与咖啡之间，浓烈是生活的默认值。",
+    archDesc:"你活得浓墨重彩。你的情绪有温度、有节拍、有张力——你不是安静的美，是滚烫的美。你爱憎分明，喜欢就是喜欢，讨厌懒得掩饰。你身上有一种让人挪不开眼的能量，你自己却常常没察觉。",
+    day:"清晨在百年咖啡馆吃牛角包，老侍者记得每个人的名字。上午在博卡区的彩房子间拍照，墙上全是涂鸦和足球。下午睡一个理直气壮的漫长午觉。夜里走进探戈舞场，灯是昏黄的，音乐是克制的，而你的每一次转身都火花四溅。",
+    need:"你需要热情被回应。你想要的不是平淡的幸福，是热烈相拥的那种人生——音乐要响，朋友要真，爱要明目张胆。你最怕的，是对着一腔热情，收到一堵墙。",
+    hidden:"你在舞池里那么耀眼，可曲终人散时，你眼里有一丝谁也没读懂的孤独。你把光都给了别人，自己的那一份，你总是最后才想起来领。" },
+
+  { id:"15", city:"清迈", country:"泰国", en:"Chiang Mai, Thailand",
+    v:{n:3,p:5,s:1,a:2,m:4,d:5,g:1,y:2,c:0,e:3,h:4,w:4},
+    arch:"慢活的园丁",
+    intro:"寺庙挨着市集，人人都是慢活的手艺人。",
+    archDesc:"你信奉「慢慢来，比较快」。你的幸福不是烟火一瞬，而是像院子里的植物，一天天、安安静静地长。你不跟人比进度，只跟去年的自己比——长高了一点，就很好。你身上有一种能让焦躁的人都慢下来的气场。",
+    day:"清晨去寺庙布施，听僧人诵经。上午在周末集市淘手作，砍价砍得笑出声。下午在小院里侍弄花草，给柠檬树浇水。傍晚煮一锅冬阴功，坐在竹椅上吹风，听虫鸣一层一层盖过城市的音量。",
+    need:"你需要「松弛但不荒废」的生活——安静地生长，而不是停止生长。你要的不是退休，而是一种自己说了算的节奏：今天侍弄花，明天学个新手艺，后天什么都不干也不心虚。",
+    hidden:"你看起来毫无野心，其实你只是把竞争心换成了耐心。你在悄悄把自己养成一片森林——等你长成的那天，所有着急的人都会羡慕你。" },
+
+  { id:"16", city:"罗瓦涅米", country:"芬兰", en:"Rovaniemi, Finland",
+    v:{n:5,p:4,s:5,a:1,m:5,d:0,g:3,y:3,c:5,e:1,h:1,w:4},
+    arch:"安静的倾听者",
+    intro:"雪国寂静深长，沉默在这里是种礼貌。",
+    archDesc:"你话不多，但你听得比谁都认真。你的温柔是雪落无声的那种——落在谁身上，谁知道。你从不急着给建议，你只是先听懂。跟你待在一起很舒服，因为你从来不让人觉得自己被评判。",
+    day:"清晨在雪松木小屋里醒来，窗外的雪厚得像被子。上午穿滑雪板穿过白色森林，只听见自己的呼吸。下午在壁炉边喝热浆果汁，给驯鹿喂苔藓。夜里裹着毯子躺在玻璃穹顶下，等极光出现的那几分钟，谁说话都嫌吵。",
+    need:"你需要「不社交也能心安」的自由。你的能量来自寂静——独处不是你的缺陷，是你的充电方式。你要的从来不是热闹，是那种不用说话也不尴尬的关系。",
+    hidden:"你以为自己喜欢一个人待着，其实你只是还没遇到那个「一起沉默也不尴尬」的人。遇到了，你会发现自己原来这么想被理解。" },
+
+  { id:"17", city:"普罗旺斯", country:"法国", en:"Provence, France",
+    v:{n:3,p:5,s:2,a:4,m:3,d:3,g:2,y:2,c:1,e:3,h:3,w:4},
+    arch:"田园画家",
+    intro:"面包与薰衣草齐香，午睡是一件正经事。",
+    archDesc:"你有把平凡日子过成油画的天赋。你的幸福藏在具体的小事里：一炉面包、一束薰衣草、一场不设闹钟的午睡。你对生活有一种虔诚——再普通的黄昏，你也舍不得敷衍。",
+    day:"清晨被公鸡叫醒，去门口面包店买还烫手的法棍。上午在薰衣草田里拍照，紫色一直铺到天边。下午学着梵高的样子支起画架，画得不好也无所谓。傍晚在院子里摆上长桌，番茄、橄榄油、桃子和朋友，一样都不能少。",
+    need:"你需要生活的质感——不是贵，是讲究；不是多，是刚刚好。你要的是那种「被认真对待过」的感觉：食物、房间、时间，还有你自己。",
+    hidden:"你看似佛系知足，其实你对「怎么活」这件事，比谁都野心勃勃。你要的不是比别人好，而是比昨天的自己更像样。" },
+
+  { id:"18", city:"阿塔卡马沙漠", country:"智利", en:"Atacama, Chile",
+    v:{n:5,p:3,s:5,a:2,m:4,d:0,g:4,y:5,c:1,e:1,h:1,w:0},
+    arch:"仰望星空的人",
+    intro:"荒漠干燥纯净，夜空是所有人共同的屋顶。",
+    archDesc:"你的灵魂尺度是宇宙级的。眼前的事烦恼不了你太久，因为你总是不自觉地抬头看天。别人纠结一周的事，你把它放进十年、百年、光年的刻度里，它就自己缩小了。你不是没情绪，你只是有自己的参照系。",
+    day:"清晨在沙漠小镇的白土坯房里醒来，干燥的空气干净得发甜。上午骑马穿过盐湖，看火烈鸟在雪山脚下起飞。下午在间歇泉边看大地冒出白雾。夜里参加观星团，在全世界最透明的夜空下，第一次看清银河真的是一条河。",
+    need:"你需要一个足够大的时空——大到能把你那些「过不去的事」变成「小事」。你的人生课题从来不是解决问题，而是换一个高度看问题。",
+    hidden:"你看起来理性冷静，其实你做每个决定时，心里都有一颗指路的星星。你不信运气，你信方向——只要方向对，慢一点你也不慌。" },
+
+  { id:"19", city:"乌代布尔", country:"印度", en:"Udaipur, India",
+    v:{n:2,p:3,s:1,a:4,m:1,d:5,g:2,y:5,c:0,e:5,h:5,w:3},
+    arch:"王宫漫游者",
+    intro:"湖上宫殿旧梦未醒，市集颜色浓过阳光。",
+    archDesc:"你的浪漫带着一点旧时代的宫廷气。你相信生活需要仪式感，哪怕全世界都觉得没必要——杯子要好看，蜡烛要点，晚餐要摆盘。你不是讲究，你是把「活着」当作品在经营。",
+    day:"清晨在湖上宫殿的露台做瑜伽，白鹭贴着水面掠过。上午逛五颜六色的集市，挑一块缠头巾和一堆手镯。下午在屋顶餐厅喝玛萨拉茶，看整座白色之城在湖光里发亮。傍晚在千柱宫殿散步，想象四百年前也有人像你一样，为一场日落停下脚步。",
+    need:"你需要被美包围。美学对你来说不是装饰，是尊严——粗糙的、将就的、凑合的，都会悄悄消耗你。你要的世界，颜色要浓，光要暖，细节要有出处。",
+    hidden:"你爱热闹的集市，也爱独处的宫殿。你心里住着两个灵魂：一个想被人群簇拥，一个想关起门来谁也不见——难得的是，它们相处得不错。" },
+
+  { id:"20", city:"维也纳", country:"奥地利", en:"Vienna, Austria",
+    v:{n:0,p:3,s:2,a:5,m:2,d:1,g:1,y:5,c:2,e:5,h:5,w:2},
+    arch:"沙龙思想者",
+    intro:"音乐与咖啡并重，思想是日常的消遣。",
+    archDesc:"你的灵魂是古典的。你喜欢有深度、有结构、有历史重量的东西——包括你自己。你受不了肤浅的热闹，但对一场聊到深夜的谈话毫无抵抗力。你成熟得比同龄人早，因为你一直在读那些很老、很认真的书。",
+    day:"清晨在中央咖啡馆读报，服务员记得你咖啡的甜度。上午在艺术史博物馆看勃鲁盖尔，一看就是一上午。下午沿多瑙河散步，哼一支不成调的圆舞曲。晚上去金色大厅听音乐会，散场后在雪夜里慢慢走回家，皮鞋声敲在石板路上，像节拍器。",
+    need:"你需要精神生活。贫穷对你来说不是没钱，是心里没有可以反复咀嚼的东西。你要的不过是：一杯好咖啡、一本好书，和一个聊得起来的人。",
+    hidden:"你看起来端庄克制，其实你心里有一场永不散场的歌剧——主角就是你自己。你不表演给谁看，你只是认真地，演给自己看。" },
+
+  { id:"21", city:"巴塞罗那", country:"西班牙", en:"Barcelona, Spain",
+    v:{n:1,p:1,s:0,a:5,m:0,d:4,g:1,y:1,c:1,e:4,h:4,w:1},
+    arch:"炽烈的艺术家",
+    intro:"街头就是舞台，晚饭要等星星出来才吃。",
+    archDesc:"你的生命力和高迪的曲线一样，拒绝直线，拒绝平庸。你相信人生就该像一场永不落幕的街头演出——有颜色，有鼓点，有即兴。你受不了死气沉沉的规矩，你的创造力总能在规则外面开花。",
+    day:"清晨在波盖利亚市场喝鲜榨果汁，水果堆成彩虹。上午看圣家堂的光透过彩窗落在石柱上，站在原地起鸡皮疙瘩。下午在海滩上晒太阳，听人用六种语言聊天。夜里十点才吃晚饭，兰布拉大道上全是歌声、掌声和酒杯碰在一起的声音。",
+    need:"你需要活着的热气。你宁可热烈地烦恼，也不要平静地麻木。你要的城市是有心跳的：晚上十点还有人在街上唱歌，邻居会跟你打招呼，生活不用预约。",
+    hidden:"你把每一天都过得像节日，是因为你比谁都明白：热闹是会散的，所以要用力记住。你的快乐是认真的——那是你对抗遗忘的方式。" },
+
+  { id:"22", city:"霍巴特", country:"澳大利亚", en:"Hobart, Tasmania",
+    v:{n:5,p:5,s:4,a:2,m:4,d:2,g:4,y:1,c:3,e:1,h:1,w:3},
+    arch:"岛屿漫游者",
+    intro:"世界尽头的集市，樱桃和海风都新鲜。",
+    archDesc:"你要的是「世界尽头」的那种清净。不是无趣，是把人生调到只属于你自己的频道。你对内卷天然免疫——不是逃，是你很早就想明白了：人生不是轨道，是旷野，而旷野不需要观众。",
+    day:"清晨在萨拉曼卡周末集市买一把新鲜樱桃。上午开车沿海岸线乱逛，路过哪个湾就下去走走。下午在威灵顿山上看云从脚下翻过去。傍晚在港口小酒馆吃生蚝，配一杯本地啤酒，和陌生酒友聊到打烊。",
+    need:"你需要离主要剧情远一点。太卷的地方，你的灵魂会缺氧。你要的城市不用大，但要真：集市要新鲜，海风要咸，人跟人之间要留有余地。",
+    hidden:"你总说来这里是为了清静，其实你是想找一个地方，重新找回那个没被生活磨平的自己。你不是在躲世界，你是在找回自己。" },
+
+  { id:"23", city:"会安", country:"越南", en:"Hoi An, Vietnam",
+    v:{n:3,p:5,s:1,a:3,m:4,d:5,g:1,y:1,c:0,e:3,h:4,w:5},
+    arch:"灯笼下的手艺人",
+    intro:"灯笼照亮古城，好东西都要手工慢慢做。",
+    archDesc:"你的气质是手工的、温热的、有光的。你相信好东西需要时间，感情也是。你做事情有一种老派的认真——不快，但每一步都算数。你身上的暖，不是热情型的那种，是让人安心的那种。",
+    day:"清晨在秋盆河边看渔夫撒网，雾还没散。上午学做一碗地道的手工米粉，面粉沾了一脸。下午在裁缝店挑一块布，等一条为自己量身的裙子。傍晚满城灯笼次第亮起，你放一盏河灯，看它摇摇晃晃漂向月亮的方向。",
+    need:"你需要「亲手做点什么」的踏实感。你相信手上的温度能熨平心里的褶皱——做饭、种花、缝补、写字，都算。你不太信任来得太容易的东西，你信自己一点点做出来的。",
+    hidden:"你温柔得像灯笼，但别误会——灯笼也是有骨架的。你只是不轻易展示你的原则；真碰到了，你会稳稳地站在那里，一步不让。" },
+
+  { id:"24", city:"圣塔菲", country:"美国", en:"Santa Fe, New Mexico, USA",
+    v:{n:4,p:5,s:4,a:5,m:3,d:1,g:3,y:3,c:2,e:3,h:4,w:1},
+    arch:"沙漠调色师",
+    intro:"土坯房与画廊共生，色彩自成一门方言。",
+    archDesc:"你有一种高级的「土气」——土坯房的赭红、沙漠的杏黄、天空的钴蓝。你的审美自成一派，且从不解释。你不需要昂贵的标签，你需要的是「对的味道」：一把旧椅子、一面褪色的墙，都可能是你的心头好。",
+    day:"清晨在土坯房的院子里喝咖啡，蜥蜴从篱笆上探头。上午逛几十家画廊，看印第安银饰和当代艺术在同一面墙上对话。下午在山间徒步，鼠尾草的气味被太阳晒出来。傍晚看整片天空变成粉紫，远处的山烧成玫瑰色——那就是著名的「圣塔菲之光」。",
+    need:"你需要审美上的同类。你要的不是热闹的人群，是懂你的人——你说「这个颜色真好」，对方能看见你说的是哪一种好。这种默契，比爱情还稀缺。",
+    hidden:"你嘴上说随便就好，其实你把每一件小事都悄悄调成了自己喜欢的比例：桌上的杯子朝哪边、照片挂在多高。你活得比你表现出来的讲究得多。" },
+
+  { id:"25", city:"布拉格", country:"捷克", en:"Prague, Czechia",
+    v:{n:2,p:3,s:2,a:5,m:2,d:3,g:3,y:3,c:3,e:5,h:5,w:4},
+    arch:"午夜童话收藏家",
+    intro:"红屋顶下童话未完，时间值得慢慢收藏。",
+    archDesc:"你心里有一座红屋顶的老城。你收集一切美好的、略带忧伤的、像童话又像回忆的东西。你有种旧式的深情——对旧物、旧歌、旧街角，都念念不忘。你的眼泪点低，但你不觉得这是缺点。",
+    day:"清晨在伏尔塔瓦河边看天鹅，查理大桥上只有早起的画家。上午在天文钟下等整点的十二使徒，像小时候等糖果。下午在城堡区的巷子里迷路，迷得心甘情愿。夜里在河边小酒馆喝黑啤，看城堡的灯一盏盏亮起，像有人把星星别在了山上。",
+    need:"你需要可以反复回味的瞬间。你的快乐不是即时的，是慢慢发酵的——某个黄昏、某句台词、某次没打招呼的微笑，你会在心里存很多年。",
+    hidden:"你看起来活在当下，其实你一直在认真收藏时间。你比谁都怕遗忘——你怕的不是老去，是那些美好的瞬间，没有被好好记下来。" },
+
+  { id:"26", city:"杜布罗夫尼克", country:"克罗地亚", en:"Dubrovnik, Croatia",
+    v:{n:4,p:4,s:2,a:2,m:4,d:2,g:2,y:2,c:2,e:3,h:4,w:3},
+    arch:"城墙上的守望者",
+    intro:"石头城面朝大海，安稳是这里的性格。",
+    archDesc:"你安静、坚定、有安全感。像那座亚得里亚海的石头城，任凭风浪，自岿然不动。你不是没有情绪，而是情绪来得快、去得也快，很少过夜。朋友有事第一个想到你，因为你稳。",
+    day:"清晨绕着老城城墙走一圈，左边是赭红屋顶，右边是宝石蓝的海。上午坐缆车上到山顶，把整座城和远处的岛屿收进眼里。下午在石头小巷里穿行，找一家只有本地人的餐厅。傍晚坐在防波堤上看夕阳把海面熔成金色，直到灯塔亮起来。",
+    need:"你需要「稳」。不是一成不变，而是无论世界怎么变，你都有可以踩住的那块石头——一间自己的房、几个不会散的人、一门饿不死的手艺。",
+    hidden:"你给别人安全感，但你心里知道——你守护别人的能力，来自你也曾被很好地守护过。所以你格外念旧，也格外愿意做那个撑伞的人。" },
+
+  { id:"27", city:"开普敦", country:"南非", en:"Cape Town, South Africa",
+    v:{n:5,p:1,s:2,a:2,m:0,d:4,g:3,y:1,c:2,e:2,h:1,w:2},
+    arch:"自在的野游者",
+    intro:"山与海之间，规则让位给旷野的活法。",
+    archDesc:"你是那种「自带旷野」的人。规则能约束你的行为，但从来约束不了你的想象力。你不反叛，只是天生不服管——你可以合作，但别指望驯服。你的眼睛里有山有海，装不下格子间。",
+    day:"清晨在桌山脚下跑步，云正从山顶像桌布一样铺下来。上午自驾查普曼峰公路，一边是悬崖，一边是海豹和鲸。下午在波卡普区的彩房子间拍照，整条街晒着太阳。傍晚在海滩烧烤，看大西洋的落日和企鹅摇摇摆摆地回家。",
+    need:"你需要广阔的可能性。堵死所有岔路的人生，会让你窒息。你可以接受辛苦，但不能接受「一眼望到头」；你可以接受失败，但不能接受「没试过」。",
+    hidden:"你看起来野性洒脱，其实你对所爱的人，细心得让人惊讶——谁爱吃什么都记得，谁的难过你一眼就看穿。你只是不承认。" },
+
+  { id:"28", city:"采尔马特", country:"瑞士", en:"Zermatt, Switzerland",
+    v:{n:5,p:5,s:4,a:1,m:5,d:0,g:3,y:2,c:5,e:1,h:1,w:3},
+    arch:"雪山冥想者",
+    intro:"雪山脚下无喧嚣，炉火和奶酪暖着长夜。",
+    archDesc:"你内心有一种「高海拔的平静」。事情再乱，你也能像马特洪峰一样，先站稳，再说话。你语速不快，但每句都算数。你的可靠不是刻意修炼出来的，是性格里自带的基石。",
+    day:"清晨推窗，马特洪峰就在眼前，金字塔形的山体镀着金光。上午坐齿轮火车上山，在云海之上喝热可可。下午在无人的雪道滑行，只有风声和板刃切开雪面的声音。傍晚在木屋里吃奶酪火锅，炉火噼啪，窗外雪落无声。",
+    need:"你需要「确定性中的崇高」——那些几亿年不动的山，让你觉得心安。你不太需要新鲜刺激，你需要的是那种「它一直在」的踏实：山在，灯在，人在。",
+    hidden:"你看起来冷静克制，其实你选的每一座山，都是你愿意用一生去爬的。你不轻易承诺，但承诺了，你就是那座山。" },
+
+  { id:"29", city:"乌兰巴托草原", country:"蒙古", en:"Steppe, Mongolia",
+    v:{n:5,p:5,s:5,a:1,m:3,d:1,g:5,y:3,c:3,e:0,h:1,w:1},
+    arch:"游牧的自由灵魂",
+    intro:"逐水草而居，地平线是唯一的邻居。",
+    archDesc:"你心里有一片没有围栏的草原。地平线对你来说不是尽头，是邀请。你受不了被圈在方寸之间——工位、日程、别人给你画的边界。你的归属感很特别：不在哪个城市，而在「在路上」这件事本身。",
+    day:"清晨从蒙古包里钻出来，空气凉得像泉水。上午骑马穿过丘陵，牧民远远地朝你挥手。下午在河边喝茶吃奶豆腐，云的影子在草地上慢慢爬。夜里躺在草地上，银河清晰得像被人重新点亮过——你数着数着就睡着了，梦里都是马蹄声。",
+    need:"你需要「无边」。任何形式的圈养，哪怕是温柔的圈养，都会让你想逃。你要的不是更多东西，而是更少的天花板——视野要宽，选择要多，退路要留。",
+    hidden:"你以为自己永远在远方，其实你走的每一步，都带着故乡的地平线。你四处流浪找的不是别处，是一个能让你终于想停下来的地方。" },
+
+  { id:"30", city:"敦煌", country:"中国", en:"Dunhuang, Gansu, China",
+    v:{n:5,p:4,s:4,a:4,m:3,d:1,g:3,y:5,c:1,e:2,h:5,w:0},
+    arch:"大漠行吟诗人",
+    intro:"千年壁画守着风沙，商队的故事仍在传唱。",
+    archDesc:"你的灵魂里同时装着骆驼与月光。你能在最苍凉的地方，看出最绚烂的颜色——别人看荒漠是荒漠，你看见的是一千年前画师留下的笔触。你有把「苍凉」翻译成「壮美」的天赋，这让你注定不属于肤浅的热闹。",
+    day:"清晨爬上鸣沙山看日出，沙子的凉意从脚底一直漫到心里。上午在莫高窟里看千年的飞天，讲解员的声音轻得像怕吵醒谁。下午在树荫下吃一碗驴肉黄面，听风从戈壁上吹过来。夜里躺在沙丘上，看月亮把沙海的纹路照成一页页翻开的书。",
+    need:"你需要时间感。那些存在了一千年的东西，能把你从眼前的焦虑里捞出来——王朝会换，风沙会移，可人类认真活过的痕迹一直都在。这让你安心：你也想留下一点这样的痕迹。",
+    hidden:"你向往大漠的辽阔，其实你真正迷恋的是那种「渺小」——渺小让你终于可以卸下所有要强。在那么大的天地之间，你可以只是你自己，不欠任何人一个解释。" }
+];
+
+/* ===================== 状态 ===================== */
+const CODE = "6600";
+let quiz = [], idx = 0, picks = [], locked = false;
+
+const $ = id => document.getElementById(id);
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  $(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+
+/* 封面 → 提取码 */
+$("startBtn").onclick = () => { show("gate"); setTimeout(()=>$("codeInput").focus(), 380); };
+$("gateBack").onclick = () => show("cover");
+
+function tryCode(){
+  const v = $("codeInput").value.trim();
+  if(v === CODE){
+    $("gateErr").classList.remove("show");
+    startQuiz();
+  } else {
+    $("gateErr").classList.add("show");
+    const box = document.querySelector(".gate-box");
+    box.classList.remove("shake");
+    void box.offsetWidth;
+    box.classList.add("shake");
+    $("codeInput").select();
+  }
+}
+$("gateBtn").onclick = tryCode;
+$("codeInput").addEventListener("keydown", e => { if(e.key === "Enter") tryCode(); });
+$("codeInput").addEventListener("input", () => {
+  $("codeInput").value = $("codeInput").value.replace(/\D/g,"").slice(0,6);
+  $("gateErr").classList.remove("show");
+});
+
+/* ===================== 答题 ===================== */
+function startQuiz(){
+  quiz = QUESTIONS.slice();
+  for(let i=quiz.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [quiz[i],quiz[j]] = [quiz[j],quiz[i]]; }
+  idx = 0; picks = []; locked = false;
+  show("quiz");
+  renderQ();
+}
+
+function renderQ(){
+  const q = quiz[idx];
+  $("qType").textContent = q.t === "情境" ? "情境选择题" : (q.t === "价值观" ? "价值观选择题" : "审美投射题");
+  $("qNow").textContent = String(idx+1).padStart(2,"0");
+  $("qbarFill").style.width = (idx/quiz.length*100) + "%";
+  $("qText").textContent = q.q;
+
+  const box = $("qOpts");
+  box.innerHTML = "";
+  q.o.forEach((opt, i) => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.style.animationDelay = (i*38) + "ms";
+    b.innerHTML = `<span class="dot"></span><span>${opt[0]}</span>`;
+    b.onclick = () => choose(i, b);
+    box.appendChild(b);
+  });
+  window.scrollTo(0,0);
+}
+
+function choose(i, el){
+  if(locked) return;
+  locked = true;
+  el.classList.add("sel");
+  picks[idx] = i;
+  setTimeout(() => {
+    locked = false;
+    if(idx < quiz.length - 1){ idx++; renderQ(); }
+    else { $("qbarFill").style.width = "100%"; finish(); }
+  }, 260);
+}
+
+/* ===================== 计分 ===================== */
+/* 每题每维的"选项池基线"，用于消除题目本身对某些维度的系统性偏好 */
+const BASE = QUESTIONS.map(q => {
+  const m = [], sd = [];
+  for(let i=0;i<DIMS.length;i++){
+    const vals = q.o.map(o => o[1][DIMS[i]] || 0);
+    const mu = vals.reduce((a,b)=>a+b,0) / vals.length;
+    const va = vals.reduce((a,b)=>a+(b-mu)*(b-mu),0) / vals.length;
+    m.push(mu); sd.push(Math.sqrt(va) || 1);
+  }
+  return { m, sd };
+});
+
+function zscore(arr){
+  const m = arr.reduce((a,b)=>a+b,0)/arr.length;
+  const sd = Math.sqrt(arr.reduce((a,b)=>a+(b-m)*(b-m),0)/arr.length) || 1;
+  return arr.map(x=>(x-m)/sd);
+}
+function pearson(x, y){
+  const mx = x.reduce((a,b)=>a+b,0)/x.length, my = y.reduce((a,b)=>a+b,0)/y.length;
+  let n=0, dx=0, dy=0;
+  for(let i=0;i<x.length;i++){ n += (x[i]-mx)*(y[i]-my); dx += (x[i]-mx)**2; dy += (y[i]-my)**2; }
+  return n / (Math.sqrt(dx*dy) || 1);
+}
+const LOC_Z = LOCATIONS.map(l => zscore(DIMS.map(d => l.v[d] || 0)));
+
+/* ---- 均衡抽签：近期出过的地点按时间衰减降权，保证连测会轮换 ---- */
+const HIST_KEY = "shg_hist_v1";
+function loadHist(){
+  try{ return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); }catch(e){ return []; }
+}
+function saveHist(arr){
+  try{ localStorage.setItem(HIST_KEY, JSON.stringify(arr.slice(-28))); }catch(e){}
+}
+function userZ(){
+  const u = [];
+  for(let i=0;i<DIMS.length;i++){
+    let v = 0;
+    picks.forEach((p, qi) => {
+      const w = quiz[qi].o[p][1];
+      v += ((w[DIMS[i]] || 0) - BASE[qi].m[i]) / BASE[qi].sd[i];
+    });
+    u.push(v);
+  }
+  return zscore(u);
+}
+
+function finish(){
+  const uz = userZ();
+  const rs = LOC_Z.map(lz => pearson(uz, lz));
+
+  // 反重复降权：最近一次 -3.0，往前每次乘 0.95，最多追溯 28 次
+  // （模拟验证：瞎选 30 连测 30 地点分布 3.1%~3.5%，接近完全均匀；首测准确性不受影响）
+  const hist = loadHist();
+  const pen = {};
+  hist.forEach((id, k) => {
+    const w = 3.0 * Math.pow(0.95, hist.length - 1 - k);
+    pen[id] = (pen[id] || 0) + w;
+  });
+
+  let best = null, bestS = -9, bestR = 0;
+  LOCATIONS.forEach((loc, j) => {
+    const s = rs[j] + (Math.random() - 0.5) * 0.12 - (pen[loc.id] || 0);
+    if(s > bestS){ bestS = s; best = loc; bestR = rs[j]; }
+  });
+  hist.push(best.id);
+  saveHist(hist);
+
+  const pct = Math.max(76, Math.min(99, Math.round(46 + bestR * 55)));
+  renderResult(best, uz, pct);
+}
+
+/* ===================== 结果 ===================== */
+/* 共振语句素材：12 维的"人话"短语 */
+const DIM_PHRASE = {
+  n:"对旷野与自然的渴望", p:"把日子过慢的本事", s:"与自己安静相处的能力",
+  a:"对美的敏感", m:"安放情绪的温柔", d:"对烟火人间的热忱",
+  g:"随时出发的勇气", y:"向内探索的深度", c:"对清冽辽远的偏爱",
+  e:"浓烈张扬的审美", h:"对旧时光的迷恋", w:"把人放在心上的暖意"
+};
+
+function syncText(loc, uz){
+  const j = LOCATIONS.indexOf(loc), lz = LOC_Z[j];
+  const locTop = DIMS.map((d,i)=>[lz[i],i]).sort((a,b)=>b[0]-a[0]);
+  const uTop = DIMS.map((d,i)=>[uz[i],i]).sort((a,b)=>b[0]-a[0]).slice(0,4).map(x=>x[1]);
+  let shared = locTop.slice(0,3).find(x=>uTop.includes(x[1]));
+  if(!shared) shared = locTop[0];
+  const gift = locTop.find(x=>!uTop.includes(x[1]))[1];
+  const sp = DIM_PHRASE[DIMS[shared[1]]], gp = DIM_PHRASE[DIMS[gift]];
+  return `你和${loc.city}最同频的地方，是${sp}——你身上最亮的那束光，恰好也是它最浓的气质。而它还想悄悄送你一件礼物：多一点${gp}，那正是你平时收得最紧的部分。`;
+}
+
+function renderResult(loc, uz, pct){
+  show("result");
+  goPage(0);
+  ringDone = false;
+
+  // 照片：images/01.jpg，缺失时降级为风格化占位图
+  const img = $("rImg"), ph = $("rPh");
+  img.classList.remove("hide"); ph.classList.remove("show");
+  img.dataset.retried = "";
+  img.onload = () => { img.classList.remove("hide"); ph.classList.remove("show"); };
+  img.onerror = () => {
+    if(!img.dataset.retried){ img.dataset.retried = "1"; img.src = "images/" + loc.id + ".png"; }
+    else { img.classList.add("hide"); ph.classList.add("show"); }
+  };
+  img.src = "images/" + loc.id + ".jpg";
+  $("phCity").textContent = loc.city;
+
+  $("rCountry").textContent = loc.country;
+  $("rCity").textContent = loc.city;
+  $("rEn").textContent = loc.en;
+  $("rIntro").textContent = loc.intro;
+
+  $("rArch").textContent = loc.arch;
+  $("rArchDesc").textContent = loc.archDesc;
+  $("rDay").textContent = loc.day;
+  $("rNeed").textContent = loc.need;
+  $("rHidden").textContent = loc.hidden;
+  $("rSync").textContent = syncText(loc, uz);
+
+  $("pctTip").textContent = "你和这座城市的灵魂共振度是 " + pct + "%，它在世界的另一边，替你安静地存在着。";
+
+  // 圆环归零，翻到第 2 页时再播放动画
+  const arc = $("ringArc"), C = 2*Math.PI*88;
+  arc.style.transition = "none";
+  arc.style.strokeDashoffset = C;
+  $("pctNum").textContent = "0";
+}
+
+/* 分页（3 页） */
+const dotsHTML = n => Array.from({length:3}, (_,i)=>`<i class="${i===n?"on":""}"></i>`).join("");
+let page = 0, ringDone = false;
+function goPage(n){
+  page = n;
+  document.querySelectorAll(".rpage").forEach(p => p.classList.remove("on"));
+  $("rp"+n).classList.add("on");
+  for(let i=0;i<3;i++){ const d = $("dots"+i); if(d) d.innerHTML = dotsHTML(n); }
+  window.scrollTo(0,0);
+  if(n === 1 && !ringDone){ ringDone = true; setTimeout(animateRing, 260); }
+}
+function animateRing(){
+  const C = 2*Math.PI*88, arc = $("ringArc");
+  const tip = $("pctTip").textContent, m = tip.match(/(\d+)%/);
+  const pct = m ? +m[1] : 90;
+  arc.style.transition = "none";
+  arc.style.strokeDashoffset = C;
+  void arc.getBoundingClientRect();
+  arc.style.transition = "stroke-dashoffset 1.5s cubic-bezier(.22,.9,.24,1)";
+  arc.style.strokeDashoffset = C * (1 - pct/100);
+  const numEl = $("pctNum"), t0 = performance.now();
+  const tick = t => {
+    const k = Math.min(1, (t-t0)/1400);
+    const e = 1 - Math.pow(1-k, 3);
+    numEl.textContent = Math.round(pct*e);
+    if(k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+$("rNext0").onclick = () => goPage(1);
+$("rNext1").onclick = () => goPage(2);
+$("rAgain").onclick = () => { show("cover"); };
+
+window.addEventListener("load", () => { window.scrollTo(0,0); });
+</script>
+</body>
+</html>
